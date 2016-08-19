@@ -28,4 +28,4 @@ class ConfigGetHandler(common.handler.AuthenticatedHandler):
                 404,
                 "Config was not found")
         else:
-            self.write(config)
+            self.dumps(config)
