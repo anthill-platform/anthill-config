@@ -46,7 +46,7 @@ class ApplicationController(a.AdminController):
                 a.link("apps", "Go back"),
                 a.link("scheme", "Edit default scheme", badge="default", icon="flask",
                        app_id=self.context.get("record_id"), version_id=DEFAULT),
-                a.link("/env/app", "Manage app '{0}' at 'Environment' service.".format(data["app_name"]),
+                a.link("/environment/app", "Manage app '{0}' at 'Environment' service.".format(data["app_name"]),
                        icon="link text-danger", record_id=data["app_record_id"]),
             ])
         ]
@@ -225,7 +225,7 @@ class ApplicationsController(a.AdminController):
             ]),
             a.links("Navigate", [
                 a.link("index", "Go back"),
-                a.link("/env/apps", "Manage apps", icon="link text-danger"),
+                a.link("/environment/apps", "Manage apps", icon="link text-danger"),
             ])
         ]
 
@@ -323,7 +323,7 @@ class SchemeController(a.AdminController):
                        app_id=self.context.get("app_id"),
                        version_id=self.context.get("version_id"),
                        icon="tags"),
-                a.link("https://github.com/jdorn/json-editor#default-properties", "See docs", icon="book")
+                a.link("https://spacetelescope.github.io/understanding-json-schema/index.html", "See docs", icon="book")
             ])
         ])
 
