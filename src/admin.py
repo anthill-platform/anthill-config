@@ -51,10 +51,7 @@ class ApplicationController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["config_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["config_admin"]
 
 
@@ -173,10 +170,7 @@ class ApplicationVersionController(a.AdminController):
 
         return l
 
-    def scopes_read(self):
-        return ["config_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["config_admin"]
 
     @coroutine
@@ -229,10 +223,7 @@ class ApplicationsController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["config_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["config_admin"]
 
 
@@ -244,10 +235,7 @@ class RootAdminController(a.AdminController):
             ])
         ]
 
-    def scopes_read(self):
-        return ["config_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["config_admin"]
 
 
@@ -329,10 +317,7 @@ class SchemeController(a.AdminController):
 
         return l
 
-    def scopes_read(self):
-        return ["config_admin"]
-
-    def scopes_write(self):
+    def access_scopes(self):
         return ["config_admin"]
 
     @coroutine
