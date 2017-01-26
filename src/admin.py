@@ -43,7 +43,7 @@ class ApplicationController(a.AdminController):
                        app_id=self.context.get("record_id"), version_id=DEFAULT)
             ]),
             a.links("Navigate", [
-                a.link("apps", "Go back"),
+                a.link("apps", "Go back", icon="chevron-left"),
                 a.link("scheme", "Edit default scheme", badge="default", icon="flask",
                        app_id=self.context.get("record_id"), version_id=DEFAULT),
                 a.link("/environment/app", "Manage app '{0}' at 'Environment' service.".format(data["app_name"]),
@@ -161,7 +161,7 @@ class ApplicationVersionController(a.AdminController):
 
         l.extend([
             a.links("Navigate", [
-                a.link("app", "Go back", record_id=self.context.get("app_id")),
+                a.link("app", "Go back", icon="chevron-left", record_id=self.context.get("app_id")),
                 a.link("scheme", "Edit scheme for this version", icon="flask",
                        app_id=self.context.get("app_id"),
                        version_id=self.context.get("version_id"))
@@ -218,7 +218,7 @@ class ApplicationsController(a.AdminController):
                     for app_id, app_name in data["apps"].iteritems()
             ]),
             a.links("Navigate", [
-                a.link("index", "Go back"),
+                a.link("index", "Go back", icon="chevron-left"),
                 a.link("/environment/apps", "Manage apps", icon="link text-danger"),
             ])
         ]
@@ -306,7 +306,7 @@ class SchemeController(a.AdminController):
                     "primary")
             }, data=data),
             a.links("Navigate", [
-                a.link("app", "Go back", record_id=self.context.get("app_id")),
+                a.link("app", "Go back", icon="chevron-left", record_id=self.context.get("app_id")),
                 a.link("app_version", "Edit configuration for this scheme",
                        app_id=self.context.get("app_id"),
                        version_id=self.context.get("version_id"),
