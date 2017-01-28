@@ -1,7 +1,7 @@
 
 from tornado.gen import coroutine
 
-import admin
+import admin as a
 import handler
 
 import common.access
@@ -45,12 +45,15 @@ class ConfigServer(common.server.Server):
 
     def get_admin(self):
         return {
-            "index": admin.RootAdminController,
-            "apps": admin.ApplicationsController,
-            "app": admin.ApplicationController,
-            "app_version": admin.ApplicationVersionController,
-            "scheme": admin.SchemeController
+            "index": a.RootAdminController,
+            "apps": a.ApplicationsController,
+            "app": a.ApplicationController,
+            "app_version": a.ApplicationVersionController,
+            "scheme": a.SchemeController
         }
+
+    def get_internal_handler(self):
+        return handler.InternalHandler(self)
 
     def get_metadata(self):
         return {

@@ -4,6 +4,7 @@ import ujson
 from tornado.gen import coroutine, Return
 from common.database import DatabaseError
 from common.model import Model
+from common.validate import validate
 
 
 DEFAULT = "def"
@@ -48,6 +49,7 @@ class ConfigsModel(Model):
         return ["configurations"]
 
     @coroutine
+    @validate(gamespace_id="int", application_name="str", application_version="str")
     def delete_config(self, gamespace_id, application_name, application_version):
 
         try:
@@ -62,6 +64,7 @@ class ConfigsModel(Model):
         raise Return(result)
 
     @coroutine
+    @validate(gamespace_id="int", application_name="str", application_version="str", try_default="bool")
     def get_config(self, gamespace_id, application_name, application_version, try_default=False):
 
         try:
@@ -84,6 +87,7 @@ class ConfigsModel(Model):
         raise Return(config["payload"])
 
     @coroutine
+    @validate(gamespace_id="int", application_name="str", application_version="str", content="json")
     def set_config(self, gamespace_id, application_name, application_version, content):
 
         try:

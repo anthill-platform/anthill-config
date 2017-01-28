@@ -8,10 +8,12 @@ from model.config import ConfigNotFound, DEFAULT
 from model.scheme import SchemeNotFound
 
 from common.environment import AppNotFound
+from common.validate import validate
 
 
 class ApplicationController(a.AdminController):
     @coroutine
+    @validate(record_id="int")
     def get(self, record_id):
 
         env_service = self.application.env_service
@@ -57,6 +59,7 @@ class ApplicationController(a.AdminController):
 
 class ApplicationVersionController(a.AdminController):
     @coroutine
+    @validate(app_id="str", version_id="str")
     def get(self, app_id, version_id):
 
         env_service = self.application.env_service
@@ -174,13 +177,8 @@ class ApplicationVersionController(a.AdminController):
         return ["config_admin"]
 
     @coroutine
+    @validate(config="load_json")
     def update(self, config):
-
-        try:
-            config = json.loads(config)
-        except ValueError:
-            raise a.ActionError("Corrupted JSON")
-
         configs = self.application.configs
 
         yield configs.set_config(
@@ -241,6 +239,7 @@ class RootAdminController(a.AdminController):
 
 class SchemeController(a.AdminController):
     @coroutine
+    @validate(app_id="str", version_id="str")
     def get(self, app_id, version_id):
 
         env_service = self.application.env_service
@@ -321,13 +320,8 @@ class SchemeController(a.AdminController):
         return ["config_admin"]
 
     @coroutine
+    @validate(scheme="load_json")
     def update(self, scheme):
-
-        try:
-            scheme = json.loads(scheme)
-        except ValueError:
-            raise a.ActionError("Corrupted JSON")
-
         schemes = self.application.schemes
 
         yield schemes.set_scheme(
@@ -342,4 +336,3 @@ class SchemeController(a.AdminController):
             message="Configuration scheme has been updated",
             app_id=self.context.get("app_id"),
             version_id=self.context.get("version_id"))
-
