@@ -13,20 +13,20 @@ from common.validate import validate
 
 class ApplicationController(a.AdminController):
     @coroutine
-    @validate(record_id="int")
-    def get(self, record_id):
+    @validate(app_name="str_name")
+    def get(self, app_name):
 
         env_service = self.application.env_service
 
         try:
-            app = yield env_service.get_app_info(self.gamespace, record_id)
+            app = yield env_service.get_app_info(self.gamespace, app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
         result = {
-            "app_id": record_id,
-            "app_record_id": app["id"],
-            "app_name": app["title"],
+            "app_name": app_name,
+            "app_id": app["id"],
+            "app_title": app["title"],
             "versions": app["versions"]
         }
 
@@ -37,19 +37,19 @@ class ApplicationController(a.AdminController):
             a.breadcrumbs([
                 a.link("apps", "Applications")
             ], data["app_name"]),
-            a.links("Application '{0}' versions".format(data["app_name"]), links=[
-                a.link("app_version", v_name, icon="tags", app_id=self.context.get("record_id"),
-                       version_id=v_name) for v_name, v_id in data["versions"].iteritems()
+            a.links("Application '{0}' versions".format(data["app_title"]), links=[
+                a.link("app_version", v_name, icon="tags", app_name=self.context.get("app_name"),
+                       app_version=v_name) for v_name, v_id in data["versions"].iteritems()
             ] + [
                 a.link("app_version", "Default configuration", icon="tags", badge="default",
-                       app_id=self.context.get("record_id"), version_id=DEFAULT)
+                       app_name=self.context.get("app_name"), app_version=DEFAULT)
             ]),
             a.links("Navigate", [
                 a.link("apps", "Go back", icon="chevron-left"),
                 a.link("scheme", "Edit default scheme", badge="default", icon="flask",
-                       app_id=self.context.get("record_id"), version_id=DEFAULT),
+                       app_name=self.context.get("app_name"), app_version=DEFAULT),
                 a.link("/environment/app", "Manage app '{0}' at 'Environment' service.".format(data["app_name"]),
-                       icon="link text-danger", record_id=data["app_record_id"]),
+                       icon="link text-danger", record_id=data["app_id"]),
             ])
         ]
 
@@ -59,13 +59,13 @@ class ApplicationController(a.AdminController):
 
 class ApplicationVersionController(a.AdminController):
     @coroutine
-    @validate(app_id="str", version_id="str")
-    def get(self, app_id, version_id):
+    @validate(app_name="str", app_version="str")
+    def get(self, app_name, app_version):
 
         env_service = self.application.env_service
 
         try:
-            app = yield env_service.get_app_info(self.gamespace, app_id)
+            app = yield env_service.get_app_info(self.gamespace, app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
@@ -75,11 +75,11 @@ class ApplicationVersionController(a.AdminController):
         try:
             config = yield configs.get_config(
                 self.gamespace,
-                app_id,
-                version_id,
+                app_name,
+                app_version,
                 try_default=False)
         except ConfigNotFound:
-            no_such_configuration = version_id != DEFAULT
+            no_such_configuration = app_version != DEFAULT
             config = {}
         else:
             no_such_configuration = False
@@ -87,8 +87,8 @@ class ApplicationVersionController(a.AdminController):
         try:
             scheme = yield schemes.get_scheme(
                 self.gamespace,
-                app_id,
-                version_id,
+                app_name,
+                app_version,
                 try_default=True)
         except SchemeNotFound:
             no_such_scheme = True
@@ -110,8 +110,8 @@ class ApplicationVersionController(a.AdminController):
         l = [
             a.breadcrumbs([
                 a.link("apps", "Applications"),
-                a.link("app", data["app_name"], record_id=self.context.get("app_id"))
-            ], self.context.get("version_id"))
+                a.link("app", data["app_name"], app_name=self.context.get("app_name"))
+            ], self.context.get("app_version"))
         ]
 
         if data["no_such_scheme"]:
@@ -125,13 +125,13 @@ class ApplicationVersionController(a.AdminController):
                     ),
                     a.links("Navigate", links=[
                         a.link("scheme", "Edit default scheme", icon="flask", badge="default",
-                               app_id=self.context.get("app_id"),
-                               version_id=DEFAULT)
+                               app_name=self.context.get("app_name"),
+                               app_version=DEFAULT)
                     ] + [
-                        a.link("scheme", "Edit scheme for version " + self.context.get("version_id"), icon="flask",
-                               app_id=self.context.get("app_id"),
-                               version_id=self.context.get("version_id"))
-                    ] if self.context.get("version_id") != DEFAULT else [])
+                        a.link("scheme", "Edit scheme for version " + self.context.get("app_version"), icon="flask",
+                               app_name=self.context.get("app_name"),
+                               app_version=self.context.get("app_version"))
+                    ] if self.context.get("app_version") != DEFAULT else [])
                 ])
             )
         else:
@@ -146,8 +146,8 @@ class ApplicationVersionController(a.AdminController):
                         ),
                         a.links("Navigate", links=[
                             a.link("app_version", "Edit default configuration", icon="tags", badge="default",
-                                   app_id=self.context.get("app_id"),
-                                   version_id=DEFAULT)
+                                   app_name=self.context.get("app_name"),
+                                   app_version=DEFAULT)
                         ])
                     ])
                 )
@@ -164,10 +164,10 @@ class ApplicationVersionController(a.AdminController):
 
         l.extend([
             a.links("Navigate", [
-                a.link("app", "Go back", icon="chevron-left", record_id=self.context.get("app_id")),
+                a.link("app", "Go back", icon="chevron-left", app_name=self.context.get("app_name")),
                 a.link("scheme", "Edit scheme for this version", icon="flask",
-                       app_id=self.context.get("app_id"),
-                       version_id=self.context.get("version_id"))
+                       app_name=self.context.get("app_name"),
+                       app_version=self.context.get("app_version"))
             ])
         ])
 
@@ -183,16 +183,16 @@ class ApplicationVersionController(a.AdminController):
 
         yield configs.set_config(
             self.gamespace,
-            self.get_context("app_id"),
-            self.get_context("version_id"),
+            self.get_context("app_name"),
+            self.get_context("app_version"),
             config
         )
 
         raise a.Redirect(
             "app_version",
             message="Configuration has been updated",
-            app_id=self.context.get("app_id"),
-            version_id=self.context.get("version_id"))
+            app_name=self.context.get("app_name"),
+            app_version=self.context.get("app_version"))
 
 
 class ApplicationsController(a.AdminController):
@@ -212,8 +212,8 @@ class ApplicationsController(a.AdminController):
         return [
             a.breadcrumbs([], "Applications"),
             a.links("Select application", links=[
-                a.link("app", app_name, icon="mobile", record_id=app_id)
-                    for app_id, app_name in data["apps"].iteritems()
+                a.link("app", app_title, icon="mobile", app_name=app_name)
+                    for app_name, app_title in data["apps"].iteritems()
             ]),
             a.links("Navigate", [
                 a.link("index", "Go back", icon="chevron-left"),
@@ -239,13 +239,13 @@ class RootAdminController(a.AdminController):
 
 class SchemeController(a.AdminController):
     @coroutine
-    @validate(app_id="str", version_id="str")
-    def get(self, app_id, version_id):
+    @validate(app_name="str", app_version="str")
+    def get(self, app_name, app_version):
 
         env_service = self.application.env_service
 
         try:
-            app = yield env_service.get_app_info(self.gamespace, app_id)
+            app = yield env_service.get_app_info(self.gamespace, app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
@@ -254,11 +254,11 @@ class SchemeController(a.AdminController):
         try:
             scheme = yield schemes.get_scheme(
                 self.gamespace,
-                app_id,
-                version_id,
+                app_name,
+                app_version,
                 try_default=False)
         except SchemeNotFound:
-            no_such_scheme = version_id != DEFAULT
+            no_such_scheme = app_version != DEFAULT
             scheme = {"type": "object", "properties": {}}
         else:
             no_such_scheme = False
@@ -275,8 +275,8 @@ class SchemeController(a.AdminController):
         l = [
             a.breadcrumbs([
                 a.link("apps", "Applications"),
-                a.link("app", data["app_name"], record_id=self.context.get("app_id"))
-            ], "Scheme for version: " + self.context.get("version_id"))
+                a.link("app", data["app_name"], app_name=self.context.get("app_name"))
+            ], "Scheme for version: " + self.context.get("app_version"))
         ]
 
         if data["no_such_scheme"]:
@@ -290,8 +290,8 @@ class SchemeController(a.AdminController):
                     ),
                     a.links("Navigate", links=[
                         a.link("scheme", "Edit default scheme", icon="flask", badge="default",
-                               app_id=self.context.get("app_id"),
-                               version_id=DEFAULT)
+                               app_name=self.context.get("app_name"),
+                               app_version=DEFAULT)
                     ])
                 ])
             )
@@ -305,10 +305,10 @@ class SchemeController(a.AdminController):
                     "primary")
             }, data=data),
             a.links("Navigate", [
-                a.link("app", "Go back", icon="chevron-left", record_id=self.context.get("app_id")),
+                a.link("app", "Go back", icon="chevron-left", app_name=self.context.get("app_name")),
                 a.link("app_version", "Edit configuration for this scheme",
-                       app_id=self.context.get("app_id"),
-                       version_id=self.context.get("version_id"),
+                       app_name=self.context.get("app_name"),
+                       app_version=self.context.get("app_version"),
                        icon="tags"),
                 a.link("https://spacetelescope.github.io/understanding-json-schema/index.html", "See docs", icon="book")
             ])
@@ -326,13 +326,13 @@ class SchemeController(a.AdminController):
 
         yield schemes.set_scheme(
             self.gamespace,
-            self.get_context("app_id"),
-            self.get_context("version_id"),
+            self.get_context("app_name"),
+            self.get_context("app_version"),
             scheme
         )
 
         raise a.Redirect(
             "scheme",
             message="Configuration scheme has been updated",
-            app_id=self.context.get("app_id"),
-            version_id=self.context.get("version_id"))
+            app_name=self.context.get("app_name"),
+            app_version=self.context.get("app_version"))

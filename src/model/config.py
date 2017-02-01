@@ -5,6 +5,7 @@ from tornado.gen import coroutine, Return
 from common.database import DatabaseError
 from common.model import Model
 from common.validate import validate
+from common.profile import DatabaseProfile, ProfileError, NoDataError
 
 
 DEFAULT = "def"
@@ -32,6 +33,43 @@ class ConfigError(Exception):
 
     def __str__(self):
         return self.message
+
+
+class ConfigProfile(DatabaseProfile):
+    @staticmethod
+    def __encode_profile__(profile):
+        return ujson.dumps(profile)
+
+    def __init__(self, model, db, gamespace_id, application_name, application_version, try_default=False):
+        super(ConfigProfile, self).__init__(db)
+        self.model = model
+        self.gamespace_id = gamespace_id
+        self.application_name = application_name
+        self.application_version = application_version
+        self.try_default = try_default
+
+    @staticmethod
+    def __parse_profile__(profile):
+        return profile
+
+    @coroutine
+    def get(self):
+
+        try:
+            config = yield self.model.get_config(self.gamespace_id, self.application_name,
+                                            self.application_version, self.try_default, self.conn)
+        except ConfigNotFound:
+            raise NoDataError()
+
+        raise Return(config)
+
+    @coroutine
+    def insert(self, data):
+        raise NotImplementedError()
+
+    @coroutine
+    def update(self, data):
+        raise NotImplementedError()
 
 
 class ConfigsModel(Model):
@@ -63,12 +101,16 @@ class ConfigsModel(Model):
 
         raise Return(result)
 
+    @validate(gamespace_id="int", application_name="str", application_version="str", try_default="bool")
+    def get_config_profile(self, gamespace_id, application_name, application_version, try_default=False):
+        return ConfigProfile(self, self.db, gamespace_id, application_name, application_version, try_default)
+
     @coroutine
     @validate(gamespace_id="int", application_name="str", application_version="str", try_default="bool")
-    def get_config(self, gamespace_id, application_name, application_version, try_default=False):
+    def get_config(self, gamespace_id, application_name, application_version, try_default=False, db=None):
 
         try:
-            config = yield self.db.get(
+            config = yield (db or self.db).get(
                 """
                     SELECT `payload`
                     FROM `configurations`
@@ -79,7 +121,7 @@ class ConfigsModel(Model):
 
         if config is None:
             if try_default and application_version != DEFAULT:
-                config = yield self.get_config(gamespace_id, application_name, DEFAULT, try_default=False)
+                config = yield self.get_config(gamespace_id, application_name, DEFAULT, try_default=False, db=db)
                 raise Return(config)
             else:
                 raise ConfigNotFound()
