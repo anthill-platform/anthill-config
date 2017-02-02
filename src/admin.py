@@ -178,7 +178,7 @@ class ApplicationVersionController(a.AdminController):
 
     @coroutine
     @validate(config="load_json")
-    def update(self, config):
+    def update(self, config, **ignored):
         configs = self.application.configs
 
         yield configs.set_config(
@@ -321,7 +321,7 @@ class SchemeController(a.AdminController):
 
     @coroutine
     @validate(scheme="load_json")
-    def update(self, scheme):
+    def update(self, scheme, **ignored):
         schemes = self.application.schemes
 
         yield schemes.set_scheme(
