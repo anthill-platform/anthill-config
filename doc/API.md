@@ -30,7 +30,10 @@ In case of success, a complete configuration JSON object is returned
 }
 ```
 
-| Response         | Description                                          |
-|------------------|------------------------------------------------------|
-| `200 OK`         | Everything went OK, configuration follows.           |
-| `404 Not Found`  | No such configuration or game                        |
+**Warning**: Instead returning a configuration, a redirection to a CDN service may happen, so the
+client who requests the configuration must follow redirects.
+
+| Response             | Description                                          |
+|----------------------|------------------------------------------------------|
+| `200 OK / 302 Found` | Everything went OK, configuration follows.           |
+| `404 Not Found`      | No such configuration or game                        |
