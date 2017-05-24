@@ -3,7 +3,7 @@ At some point, games may need some way be to dynamically configured server-side,
 so new build would not be required in order to update a configuration.
 
 This service makes it possible by editing the game configuration with 
-[admin tool](https://github.com/anthill-services/anthill-admin) and then by 
+[admin tool](https://github.com/anthill-platform/anthill-admin) and then by 
 retrieving this configuration with client library.
 
 As editing a raw JSON may lead to misconfiguration issues, the 
