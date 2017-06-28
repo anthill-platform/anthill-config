@@ -15,14 +15,9 @@ from model.config import ConfigNotFound
 
 class ConfigGetHandler(common.handler.AuthenticatedHandler):
     @coroutine
-    @scoped()
     def get(self, app_name, app_version):
-
-        gamespace_id = self.token.get(common.access.AccessToken.GAMESPACE)
-
         try:
             config = yield self.application.configs.get_config(
-                gamespace_id,
                 app_name,
                 app_version,
                 try_default=True)
@@ -37,11 +32,10 @@ class InternalHandler(object):
         self.application = application
 
     @coroutine
-    @validate(gamespace="int", app_name="str", app_version="str")
-    def get_configuration(self, gamespace, app_name, app_version):
+    @validate(app_name="str", app_version="str")
+    def get_configuration(self, app_name, app_version):
         try:
             config = yield self.application.configs.get_config(
-                gamespace,
                 app_name,
                 app_version,
                 try_default=True)

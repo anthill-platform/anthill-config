@@ -56,8 +56,8 @@ class ConfigProfile(DatabaseProfile):
     def get(self):
 
         try:
-            config = yield self.model.get_config(self.gamespace_id, self.application_name,
-                                            self.application_version, self.try_default, self.conn)
+            config = yield self.model.get_config(
+                self.application_name, self.application_version, self.try_default, self.conn)
         except ConfigNotFound:
             raise NoDataError()
 
@@ -106,22 +106,22 @@ class ConfigsModel(Model):
         return ConfigProfile(self, self.db, gamespace_id, application_name, application_version, try_default)
 
     @coroutine
-    @validate(gamespace_id="int", application_name="str", application_version="str", try_default="bool")
-    def get_config(self, gamespace_id, application_name, application_version, try_default=False, db=None):
+    @validate(application_name="str", application_version="str", try_default="bool")
+    def get_config(self,application_name, application_version, try_default=False, db=None):
 
         try:
             config = yield (db or self.db).get(
                 """
                     SELECT `payload`
                     FROM `configurations`
-                    WHERE `application_name`=%s AND `application_version`=%s AND `gamespace_id`=%s;
-                """, application_name, application_version, gamespace_id)
+                    WHERE `application_name`=%s AND `application_version`=%s;
+                """, application_name, application_version)
         except DatabaseError as e:
             raise ConfigError("Failed to get configuration: " + e.args[1])
 
         if config is None:
             if try_default and application_version != DEFAULT:
-                config = yield self.get_config(gamespace_id, application_name, DEFAULT, try_default=False, db=db)
+                config = yield self.get_config(application_name, DEFAULT, try_default=False, db=db)
                 raise Return(config)
             else:
                 raise ConfigNotFound()
@@ -134,7 +134,6 @@ class ConfigsModel(Model):
 
         try:
             yield self.get_config(
-                gamespace_id,
                 application_name,
                 application_version)
 

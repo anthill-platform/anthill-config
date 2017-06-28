@@ -74,7 +74,6 @@ class ApplicationVersionController(a.AdminController):
 
         try:
             config = yield configs.get_config(
-                self.gamespace,
                 app_name,
                 app_version,
                 try_default=False)
