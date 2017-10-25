@@ -19,7 +19,7 @@ class ApplicationController(a.AdminController):
         env_service = self.application.env_service
 
         try:
-            app = yield env_service.get_app_info(self.gamespace, app_name)
+            app = yield env_service.get_app_info(app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
@@ -65,7 +65,7 @@ class ApplicationVersionController(a.AdminController):
         env_service = self.application.env_service
 
         try:
-            app = yield env_service.get_app_info(self.gamespace, app_name)
+            app = yield env_service.get_app_info(app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
@@ -199,7 +199,7 @@ class ApplicationsController(a.AdminController):
     def get(self):
 
         env_service = self.application.env_service
-        apps = yield env_service.list_apps(self.gamespace)
+        apps = yield env_service.list_apps()
 
         result = {
             "apps": apps
@@ -244,7 +244,7 @@ class SchemeController(a.AdminController):
         env_service = self.application.env_service
 
         try:
-            app = yield env_service.get_app_info(self.gamespace, app_name)
+            app = yield env_service.get_app_info(app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
