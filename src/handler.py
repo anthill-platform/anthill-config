@@ -10,7 +10,7 @@ from common.internal import InternalError
 
 import common.handler
 
-from model.config import ConfigNotFound
+from model.apps import NoSuchApplicationVersionError, NoSuchApplicationError
 
 
 class ConfigGetHandler(common.handler.AuthenticatedHandler):

@@ -65,3 +65,17 @@ define("cache_max_connections",
        help="Maximum connections to the regular cache (connection pool).",
        group="cache",
        type=int)
+
+# CONFIG
+
+define("data_runtime_location",
+       default="/opt/anthill/config-runtime",
+       help="CONFIG content runtime folder",
+       group="config",
+       type=str)
+
+define("data_host_location",
+       default="http://config-dev.anthill/download/",
+       help="CONFIG content prefix URL",
+       group="config",
+       type=str)

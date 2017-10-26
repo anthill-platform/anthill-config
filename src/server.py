@@ -12,8 +12,8 @@ import common.discover
 import common.database
 import common.keyvalue
 
-from model.config import ConfigsModel
-from model.scheme import SchemesModel
+from model.builds import BuildsModel
+from model.apps import BuildApplicationsModel
 
 from common.options import options
 import options as _opts
@@ -29,8 +29,8 @@ class ConfigServer(common.server.Server):
             user=options.db_username,
             password=options.db_password)
 
-        self.configs = ConfigsModel(db)
-        self.schemes = SchemesModel(db)
+        self.builds = BuildsModel(db)
+        self.apps = BuildApplicationsModel(db)
 
         self.cache = common.keyvalue.KeyValueStorage(
             host=options.cache_host,
@@ -41,15 +41,16 @@ class ConfigServer(common.server.Server):
         self.env_service = common.environment.EnvironmentClient(self.cache)
 
     def get_models(self):
-        return [self.configs, self.schemes]
+        return [self.builds, self.apps]
 
     def get_admin(self):
         return {
             "index": a.RootAdminController,
             "apps": a.ApplicationsController,
             "app": a.ApplicationController,
-            "app_version": a.ApplicationVersionController,
-            "scheme": a.SchemeController
+            "deploy_build": a.DeployBuildController,
+            "app_settings": a.ApplicationSettingsController,
+            "app_version": a.ApplicationVersionController
         }
 
     def get_internal_handler(self):
