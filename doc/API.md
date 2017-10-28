@@ -22,17 +22,17 @@ But plain <a href="https://github.com/anthill-platform/anthill-login/blob/master
 
 #### → Response
 
-In case of success, a complete configuration JSON object is returned 
+In case of success, a configuration info object is returned 
 (with `Content-Type` defined as `application/json`):
 ```json
 {
   "url": "<configuration file location over the internet>", 
-  "id": <id of the configuration>
+  "id": "<id of the configuration>"
 }
 ```
 
 After the configuration information is received, the client must download the configuration at `url`,
-and possibly cache it, using `id` as the key. On subsequent calls, befor downloading, the client much check for the
+and possibly cache it, using `id` as the key. On subsequent calls, before downloading, the client much check for the
 cache using the `id` field.
 
 | Response             | Description                                          |
