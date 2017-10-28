@@ -18,13 +18,3 @@ except exactly the one file is downloaded.
 ## REST API
 
 Please refer to the <a href="doc/API.md">API Documentation</a> for more information.
-
-## Configuration process
-
-Configuration process takes these steps:
-
-1. A [JSON Schema](https://spacetelescope.github.io/understanding-json-schema/index.html) is defined 
-either on a certain game version or for the whole game itself;
-2. The corresponding configuration is edited using visual editor;
-3. Then the configuration is received by client using simple API call.
-
