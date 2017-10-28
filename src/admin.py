@@ -152,7 +152,8 @@ class DeployBuildController(a.UploadAdminController):
 
     @coroutine
     def receive_data(self, chunk):
-        pass
+        if self.f:
+            self.f.write(chunk)
 
 
 class ApplicationController(a.AdminController):

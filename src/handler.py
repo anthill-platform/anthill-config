@@ -10,21 +10,24 @@ from common.internal import InternalError
 
 import common.handler
 
-from model.apps import NoSuchApplicationVersionError, NoSuchApplicationError
+from model.apps import NoSuchConfigurationError, ConfigApplicationError
 
 
 class ConfigGetHandler(common.handler.AuthenticatedHandler):
     @coroutine
     def get(self, app_name, app_version):
+
+        gamespace_name = self.get_argument("gamespace")
+
         try:
-            config = yield self.application.configs.get_config(
+            build = yield self.application.apps.get_version_configuration(
                 app_name,
                 app_version,
-                try_default=True)
-        except ConfigNotFound:
+                gamespace_name=gamespace_name)
+        except NoSuchConfigurationError:
             raise HTTPError(404, "Config was not found")
         else:
-            self.dumps(config)
+            self.dumps(build.dump())
 
 
 class InternalHandler(object):
@@ -32,14 +35,15 @@ class InternalHandler(object):
         self.application = application
 
     @coroutine
-    @validate(app_name="str", app_version="str")
-    def get_configuration(self, app_name, app_version):
+    @validate(app_name="str", app_version="str", gamespace="int")
+    def get_configuration(self, app_name, app_version, gamespace):
+
         try:
-            config = yield self.application.configs.get_config(
+            build = yield self.application.apps.get_version_configuration(
                 app_name,
                 app_version,
-                try_default=True)
-        except ConfigNotFound:
+                gamespace_id=gamespace)
+        except NoSuchConfigurationError:
             raise InternalError(404, "Config was not found")
-
-        raise Return(config)
+        else:
+            raise Return(build.dump())

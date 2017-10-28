@@ -27,6 +27,12 @@ class ConfigBuildAdapter(object):
         self.comment = data.get("build_comment")
         self.author = data.get("build_author")
 
+    def dump(self):
+        return {
+            "url": self.url,
+            "id": self.build_id
+        }
+
 
 class BuildsModel(Model):
     def __init__(self, db):

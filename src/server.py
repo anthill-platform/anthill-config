@@ -29,14 +29,14 @@ class ConfigServer(common.server.Server):
             user=options.db_username,
             password=options.db_password)
 
-        self.builds = BuildsModel(db)
-        self.apps = BuildApplicationsModel(db)
-
         self.cache = common.keyvalue.KeyValueStorage(
             host=options.cache_host,
             port=options.cache_port,
             db=options.cache_db,
             max_connections=options.cache_max_connections)
+
+        self.builds = BuildsModel(db)
+        self.apps = BuildApplicationsModel(db, self.cache)
 
         self.env_service = common.environment.EnvironmentClient(self.cache)
 

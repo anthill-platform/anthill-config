@@ -3,6 +3,11 @@ from tornado.gen import coroutine, Return
 from common.database import DatabaseError
 from common.model import Model
 from common.validate import validate
+from common.internal import Internal, InternalError
+from common.jsonrpc import JsonRPCError
+from common import cached
+
+from builds import ConfigBuildAdapter
 
 import ujson
 
@@ -24,6 +29,10 @@ class NoSuchApplicationVersionError(Exception):
     pass
 
 
+class NoSuchConfigurationError(Exception):
+    pass
+
+
 class ConfigApplicationVersionAdapter(object):
     def __init__(self, data):
         self.application_name = data.get("application_name")
@@ -42,14 +51,71 @@ class ConfigApplicationAdapter(object):
 
 
 class BuildApplicationsModel(Model):
-    def __init__(self, db):
+    def __init__(self, db, cache):
         self.db = db
+        self.cache = cache
+        self.internal = Internal()
 
     def get_setup_db(self):
         return self.db
 
     def get_setup_tables(self):
         return ["config_applications", "config_application_versions"]
+
+    @coroutine
+    @validate(gamespace_name="str", gamespace_id="int", application_name="str_name", application_version="str")
+    def get_version_configuration(self, application_name, application_version, gamespace_name=None, gamespace_id=None):
+
+        if gamespace_name:
+            @cached(kv=self.cache, h=lambda: "gamespace_info:" + str(gamespace_name),
+                    ttl=300, json=True)
+            def do_request():
+                return self.internal.send_request("login", "get_gamespace", name=gamespace_name)
+
+            try:
+                gamespace_info = yield do_request()
+            except JsonRPCError as e:
+                raise ConfigApplicationError(e.code, e.message)
+            except InternalError as e:
+                raise ConfigApplicationError(e.code, e.message)
+
+            gamespace_id = gamespace_info["id"]
+
+        if not gamespace_id:
+            raise ConfigApplicationError(400, "Either 'gamespace_name' or 'gamespace_id' should be defined.")
+
+        try:
+            # look for per-version configuration first
+            # if failed, fallback to per-app configuration
+            # if even that is failed, we have a 404 here
+            build = yield self.db.get(
+                """
+                SELECT * 
+                FROM `config_builds` AS b
+                WHERE b.`gamespace_id`=%s AND b.`application_name`=%s AND b.`build_id` = COALESCE(
+                    (
+                        SELECT `build_id` 
+                        FROM `config_application_versions` AS v
+                        WHERE v.`gamespace_id` = b.`gamespace_id` AND v.`application_name` = b.`application_name`
+                            AND v.`application_version`=%s
+                        LIMIT 1
+                    ),
+                    (
+                        SELECT `default_build`
+                        FROM `config_applications` AS a
+                        WHERE a.`gamespace_id`= b.`gamespace_id` AND a.`application_name` = b.`application_name`
+                        LIMIT 1
+                    )
+                )
+                LIMIT 1;
+                """, gamespace_id, application_name, application_version)
+        except DatabaseError as e:
+            raise ConfigApplicationError(500, e.args[1])
+
+        if not build:
+            raise NoSuchConfigurationError()
+
+        raise Return(ConfigBuildAdapter(build))
 
     @coroutine
     @validate(gamespace_id="int", application_name="str_name", deployment_method="str_name",
