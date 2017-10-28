@@ -9,7 +9,7 @@ define("host",
        type=str)
 
 define("listen",
-       default="unix:/usr/local/var/run/anthill/dev_config.sock",
+       default="port:9504",
        help="Socket to listen. Could be a port number (port:N), or a unix domain socket (unix:PATH)",
        type=str)
 
