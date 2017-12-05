@@ -703,7 +703,7 @@ class ApplicationVersionController(a.AdminController):
                     "date": str(build.date),
                     "comment": build.comment,
                     "author": [
-                        a.link("/profile/profile", str(build.author_name), icon="user", account=build.author)
+                        a.link("/profile/profile", build.author_name, icon="user", account=build.author)
                     ],
                     "download": [
                         a.link(build.url, "", icon="download")
