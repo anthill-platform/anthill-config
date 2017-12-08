@@ -69,7 +69,7 @@ define("cache_max_connections",
 # CONFIG
 
 define("data_runtime_location",
-       default="/opt/anthill/config-runtime",
+       default="/usr/local/anthill/config-runtime",
        help="CONFIG content runtime folder",
        group="config",
        type=str)
