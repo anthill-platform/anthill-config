@@ -5,6 +5,7 @@ from common.model import Model
 from common.validate import validate
 from common.internal import Internal, InternalError
 from common.jsonrpc import JsonRPCError
+from common.login import LoginClient, LoginClientError
 from common import cached
 
 from builds import ConfigBuildAdapter
@@ -67,16 +68,12 @@ class BuildApplicationsModel(Model):
     def get_version_configuration(self, application_name, application_version, gamespace_name=None, gamespace_id=None):
 
         if gamespace_name:
-            @cached(kv=self.cache, h=lambda: "gamespace_info:" + str(gamespace_name),
-                    ttl=300, json=True)
-            def do_request():
-                return self.internal.send_request("login", "get_gamespace", name=gamespace_name)
+
+            login_client = LoginClient(self.cache)
 
             try:
-                gamespace_info = yield do_request()
-            except JsonRPCError as e:
-                raise ConfigApplicationError(e.code, e.message)
-            except InternalError as e:
+                gamespace_info = yield login_client.find_gamespace(gamespace_name)
+            except LoginClientError as e:
                 raise ConfigApplicationError(e.code, e.message)
 
             gamespace_id = gamespace_info["id"]

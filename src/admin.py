@@ -5,7 +5,7 @@ import common.admin as a
 from model.apps import NoSuchApplicationError, NoSuchApplicationVersionError, ConfigApplicationError
 from model.builds import NoSuchBuildError, ConfigBuildError
 
-from common.environment import AppNotFound
+from common.environment import EnvironmentClient, AppNotFound
 from common.validate import validate
 from common.deployment import DeploymentMethods, DeploymentError
 from common.internal import Internal, InternalError
@@ -27,17 +27,17 @@ class DeployBuildController(a.UploadAdminController):
 
     @coroutine
     def get(self, app_name):
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
 
         try:
-            app = yield env_service.get_app_info(app_name)
+            app = yield environment_client.get_app_info(app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
         result = {
             "app_name": app_name,
-            "app_id": app["id"],
-            "app_title": app["title"]
+            "app_id": app.id,
+            "app_title": app.title
         }
 
         raise a.Return(result)
@@ -81,12 +81,12 @@ class DeployBuildController(a.UploadAdminController):
 
         self.switch_default = args.get("switch_default", False)
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
         builds = self.application.builds
 
         try:
-            yield env_service.get_app_info(app_name)
+            yield environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
@@ -163,16 +163,16 @@ class ApplicationController(a.AdminController):
     @validate(app_name="str_name", build_page="int")
     def get(self, app_name, build_page=1):
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
         builds_data = self.application.builds
 
         try:
-            app = yield env_service.get_app_info(app_name)
+            app = yield environment_client.get_app_info(app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
-        versions = app["versions"]
+        versions = app.versions
 
         try:
             app_settings = yield apps.get_application(self.gamespace, app_name)
@@ -230,8 +230,8 @@ class ApplicationController(a.AdminController):
 
         result = {
             "app_name": app_name,
-            "app_id": app["id"],
-            "app_title": app["title"],
+            "app_id": app.id,
+            "app_title": app.title,
             "versions": versions,
             "deployment_configured": deployment_configured,
             "builds": builds,
@@ -249,11 +249,11 @@ class ApplicationController(a.AdminController):
         app_name = self.context.get("app_name")
         build_id = self.context.get("build_id")
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
 
         try:
-            yield env_service.get_app_info(app_name)
+            yield environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
@@ -270,11 +270,11 @@ class ApplicationController(a.AdminController):
     def unset_default_configuration(self):
         app_name = self.context.get("app_name")
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
 
         try:
-            yield env_service.get_app_info(app_name)
+            yield environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
@@ -383,11 +383,11 @@ class ApplicationSettingsController(a.AdminController):
     @coroutine
     def get(self, app_name):
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
 
         try:
-            app = yield env_service.get_app_info(app_name)
+            app = yield environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
@@ -408,7 +408,7 @@ class ApplicationSettingsController(a.AdminController):
             deployment_methods[""] = "< SELECT >"
 
         result = {
-            "app_name": app["title"],
+            "app_name": app.title,
             "deployment_methods": deployment_methods,
             "deployment_method": deployment_method,
             "deployment_data": deployment_data
@@ -421,11 +421,11 @@ class ApplicationSettingsController(a.AdminController):
 
         app_name = self.context.get("app_name")
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
 
         try:
-            yield env_service.get_app_info(app_name)
+            yield environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
@@ -454,11 +454,11 @@ class ApplicationSettingsController(a.AdminController):
 
         app_name = self.context.get("app_name")
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
 
         try:
-            app = yield env_service.get_app_info(app_name)
+            yield environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
@@ -538,16 +538,16 @@ class ApplicationVersionController(a.AdminController):
     @validate(app_name="str_name", app_version="str", build_page="int")
     def get(self, app_name, app_version, build_page=1):
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
         builds_data = self.application.builds
 
         try:
-            app = yield env_service.get_app_info(app_name)
+            app = yield environment_client.get_app_info(app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
-        versions = app["versions"]
+        versions = app.versions
 
         if app_version not in versions:
             raise a.ActionError("No such app version")
@@ -601,8 +601,8 @@ class ApplicationVersionController(a.AdminController):
 
         result = {
             "app_name": app_name,
-            "app_id": app["id"],
-            "app_title": app["title"],
+            "app_id": app.id,
+            "app_title": app.title,
             "versions": versions,
             "builds": builds,
             "app_settings": version_settings,
@@ -619,11 +619,11 @@ class ApplicationVersionController(a.AdminController):
         app_version = self.context.get("app_version")
         build_id = self.context.get("build_id")
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
 
         try:
-            yield env_service.get_app_info(app_name)
+            yield environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
@@ -641,11 +641,11 @@ class ApplicationVersionController(a.AdminController):
         app_name = self.context.get("app_name")
         app_version = self.context.get("app_version")
 
-        env_service = self.application.env_service
+        environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
 
         try:
-            yield env_service.get_app_info(app_name)
+            yield environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
@@ -735,8 +735,8 @@ class ApplicationVersionController(a.AdminController):
 class ApplicationsController(a.AdminController):
     @coroutine
     def get(self):
-        env_service = self.application.env_service
-        apps = yield env_service.list_apps()
+        environment_client = EnvironmentClient(self.application.cache)
+        apps = yield environment_client.list_apps()
 
         result = {
             "apps": apps

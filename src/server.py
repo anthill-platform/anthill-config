@@ -38,8 +38,6 @@ class ConfigServer(common.server.Server):
         self.builds = BuildsModel(db)
         self.apps = BuildApplicationsModel(db, self.cache)
 
-        self.env_service = common.environment.EnvironmentClient(self.cache)
-
     def get_models(self):
         return [self.builds, self.apps]
 
