@@ -76,7 +76,7 @@ class BuildApplicationsModel(Model):
             except LoginClientError as e:
                 raise ConfigApplicationError(e.code, e.message)
 
-            gamespace_id = gamespace_info["id"]
+            gamespace_id = gamespace_info.gamespace_id
 
         if not gamespace_id:
             raise ConfigApplicationError(400, "Either 'gamespace_name' or 'gamespace_id' should be defined.")
