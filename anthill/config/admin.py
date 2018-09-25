@@ -1,16 +1,14 @@
-from tornado.gen import coroutine, Return
 
-import common.admin as a
+import anthill.common.admin as a
 
-from model.apps import NoSuchApplicationError, NoSuchApplicationVersionError, ConfigApplicationError
-from model.builds import NoSuchBuildError, ConfigBuildError
+from . model.apps import NoSuchApplicationError, NoSuchApplicationVersionError, ConfigApplicationError
+from . model.builds import NoSuchBuildError, ConfigBuildError
 
-from common.environment import EnvironmentClient, AppNotFound
-from common.validate import validate
-from common.deployment import DeploymentMethods, DeploymentError
-from common.internal import Internal, InternalError
+from anthill.common.environment import EnvironmentClient, AppNotFound
+from anthill.common.validate import validate
+from anthill.common.deployment import DeploymentMethods, DeploymentError
+from anthill.common.internal import Internal, InternalError
 
-import json
 import tempfile
 import os
 import math
@@ -25,12 +23,11 @@ class DeployBuildController(a.UploadAdminController):
         self.build_id = None
         self.switch_default = None
 
-    @coroutine
-    def get(self, app_name):
+    async def get(self, app_name):
         environment_client = EnvironmentClient(self.application.cache)
 
         try:
-            app = yield environment_client.get_app_info(app_name)
+            app = await environment_client.get_app_info(app_name)
         except AppNotFound as e:
             raise a.ActionError("App was not found.")
 
@@ -40,7 +37,7 @@ class DeployBuildController(a.UploadAdminController):
             "app_title": app.title
         }
 
-        raise a.Return(result)
+        return result
 
     def render(self, data):
         return [
@@ -67,8 +64,7 @@ class DeployBuildController(a.UploadAdminController):
             ])
         ]
 
-    @coroutine
-    def receive_started(self, filename, args):
+    async def receive_started(self, filename, args):
         app_name = self.context.get("app_name")
 
         try:
@@ -86,12 +82,12 @@ class DeployBuildController(a.UploadAdminController):
         builds = self.application.builds
 
         try:
-            yield environment_client.get_app_info(app_name)
+            await environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
         try:
-            settings = yield apps.get_application(self.gamespace, app_name)
+            settings = await apps.get_application(self.gamespace, app_name)
         except NoSuchApplicationError:
             raise a.ActionError("Application deployment is not configured")
         except ConfigApplicationError as e:
@@ -108,12 +104,11 @@ class DeployBuildController(a.UploadAdminController):
         self.f = open(key_path, "w")
 
         try:
-            self.build_id = yield builds.create_build(self.gamespace, app_name, comment, self.token.account)
+            self.build_id = await builds.create_build(self.gamespace, app_name, comment, self.token.account)
         except ConfigBuildError as e:
             raise a.ActionError(e.message)
 
-    @coroutine
-    def receive_completed(self):
+    async def receive_completed(self):
         app_name = self.context.get("app_name")
 
         if self.tmp_file and self.deployment and self.f and self.build_id:
@@ -124,14 +119,14 @@ class DeployBuildController(a.UploadAdminController):
                 builds = self.application.builds
 
                 try:
-                    url = yield self.deployment.deploy(self.gamespace, key_path, app_name,
+                    url = await self.deployment.deploy(self.gamespace, key_path, app_name,
                                                        str(self.gamespace) + "_" + str(self.build_id))
                 except DeploymentError as e:
-                    yield builds.delete_build(self.gamespace, self.build_id)
+                    await builds.delete_build(self.gamespace, self.build_id)
                     raise a.ActionError(e.message)
 
                 try:
-                    yield builds.update_build_url(self.gamespace, self.build_id, app_name, url)
+                    await builds.update_build_url(self.gamespace, self.build_id, app_name, url)
                 except ConfigBuildError as e:
                     raise a.ActionError(e.message)
 
@@ -139,7 +134,7 @@ class DeployBuildController(a.UploadAdminController):
 
                     apps = self.application.apps
                     try:
-                        yield apps.update_default_build(self.gamespace, app_name, self.build_id)
+                        await apps.update_default_build(self.gamespace, app_name, self.build_id)
                     except ConfigApplicationError as e:
                         raise a.Redirect("app",
                                          message="Deployed, but failed to update default build: {0}".format(e.message),
@@ -150,8 +145,7 @@ class DeployBuildController(a.UploadAdminController):
 
             raise a.Redirect("app", message="Build has been deployed", app_name=app_name)
 
-    @coroutine
-    def receive_data(self, chunk):
+    async def receive_data(self, chunk):
         if self.f:
             self.f.write(chunk)
 
@@ -159,23 +153,22 @@ class DeployBuildController(a.UploadAdminController):
 class ApplicationController(a.AdminController):
     BUILDS_PER_PAGE = 10
 
-    @coroutine
     @validate(app_name="str_name", build_page="int")
-    def get(self, app_name, build_page=1):
+    async def get(self, app_name, build_page=1):
 
         environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
         builds_data = self.application.builds
 
         try:
-            app = yield environment_client.get_app_info(app_name)
-        except AppNotFound as e:
+            app = await environment_client.get_app_info(app_name)
+        except AppNotFound:
             raise a.ActionError("App was not found.")
 
         versions = app.versions
 
         try:
-            app_settings = yield apps.get_application(self.gamespace, app_name)
+            app_settings = await apps.get_application(self.gamespace, app_name)
         except NoSuchApplicationError:
             app_settings = None
             deployment_configured = False
@@ -187,7 +180,7 @@ class ApplicationController(a.AdminController):
             default_build = app_settings.default_build
 
         try:
-            build_items, builds = yield builds_data.list_builds_pages(
+            build_items, builds = await builds_data.list_builds_pages(
                 self.gamespace, app_name,
                 limit=ApplicationController.BUILDS_PER_PAGE,
                 offset=(ApplicationController.BUILDS_PER_PAGE * (build_page - 1)))
@@ -204,13 +197,13 @@ class ApplicationController(a.AdminController):
         internal = Internal()
 
         try:
-            profiles = yield internal.send_request(
+            profiles = await internal.send_request(
                 "profile", "mass_profiles",
                 accounts=author_ids,
                 gamespace=self.gamespace,
                 action="get_public",
                 profile_fields=["name"])
-        except InternalError as e:
+        except InternalError:
             pass  # well
         else:
             for build in builds:
@@ -219,7 +212,7 @@ class ApplicationController(a.AdminController):
                     build.author_name = profile.get("name")
 
         try:
-            app_versions = yield apps.list_application_versions(self.gamespace, app_name)
+            app_versions = await apps.list_application_versions(self.gamespace, app_name)
         except ConfigApplicationError as e:
             raise a.ActionError(e.message)
         else:
@@ -242,10 +235,9 @@ class ApplicationController(a.AdminController):
             "default_build_title": "Build {0}".format(default_build) if default_build else "Unset",
         }
 
-        raise a.Return(result)
+        return result
 
-    @coroutine
-    def update_default_configuration(self):
+    async def update_default_configuration(self):
         app_name = self.context.get("app_name")
         build_id = self.context.get("build_id")
 
@@ -253,12 +245,12 @@ class ApplicationController(a.AdminController):
         apps = self.application.apps
 
         try:
-            yield environment_client.get_app_info(app_name)
+            await environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
         try:
-            yield apps.update_default_build(self.gamespace, app_name, build_id)
+            await apps.update_default_build(self.gamespace, app_name, build_id)
         except ConfigApplicationError as e:
             raise a.ActionError(e.message)
 
@@ -266,20 +258,19 @@ class ApplicationController(a.AdminController):
             "app", message="Default configuration has been updated",
             app_name=app_name)
 
-    @coroutine
-    def unset_default_configuration(self):
+    async def unset_default_configuration(self):
         app_name = self.context.get("app_name")
 
         environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
 
         try:
-            yield environment_client.get_app_info(app_name)
+            await environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
         try:
-            yield apps.unset_default_build(self.gamespace, app_name)
+            await apps.unset_default_build(self.gamespace, app_name)
         except ConfigApplicationError as e:
             raise a.ActionError(e.message)
 
@@ -306,7 +297,7 @@ class ApplicationController(a.AdminController):
                     a.link("app_version", v_name, icon="tags",
                            badge="b.{0}".format(vb[v_name].build) if v_name in vb else None,
                            app_name=self.context.get("app_name"),
-                           app_version=v_name) for v_name, v_id in data["versions"].iteritems()
+                           app_version=v_name) for v_name, v_id in data["versions"].items()
                 ])
             ])
 
@@ -380,19 +371,18 @@ class ApplicationController(a.AdminController):
 
 
 class ApplicationSettingsController(a.AdminController):
-    @coroutine
-    def get(self, app_name):
+    async def get(self, app_name):
 
         environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
 
         try:
-            app = yield environment_client.get_app_info(app_name)
+            app = await environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
         try:
-            settings = yield apps.get_application(self.gamespace, app_name)
+            settings = await apps.get_application(self.gamespace, app_name)
         except NoSuchApplicationError:
             deployment_method = ""
             deployment_data = {}
@@ -414,10 +404,9 @@ class ApplicationSettingsController(a.AdminController):
             "deployment_data": deployment_data
         }
 
-        raise a.Return(result)
+        return result
 
-    @coroutine
-    def update_deployment_method(self, deployment_method):
+    async def update_deployment_method(self, deployment_method):
 
         app_name = self.context.get("app_name")
 
@@ -425,7 +414,7 @@ class ApplicationSettingsController(a.AdminController):
         apps = self.application.apps
 
         try:
-            yield environment_client.get_app_info(app_name)
+            await environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
@@ -433,14 +422,14 @@ class ApplicationSettingsController(a.AdminController):
             raise a.ActionError("Not a valid deployment method")
 
         try:
-            stt = yield apps.get_application(self.gamespace, app_name)
+            stt = await apps.get_application(self.gamespace, app_name)
         except NoSuchApplicationError:
             deployment_data = {}
         else:
             deployment_data = stt.deployment_data
 
         try:
-            yield apps.update_application_settings(
+            await apps.update_application_settings(
                 self.gamespace, app_name, deployment_method,
                 deployment_data)
         except ConfigApplicationError as e:
@@ -449,8 +438,7 @@ class ApplicationSettingsController(a.AdminController):
         raise a.Redirect("app_settings", message="Deployment method has been updated",
                          app_name=app_name)
 
-    @coroutine
-    def update_deployment(self, **kwargs):
+    async def update_deployment(self, **kwargs):
 
         app_name = self.context.get("app_name")
 
@@ -458,12 +446,12 @@ class ApplicationSettingsController(a.AdminController):
         apps = self.application.apps
 
         try:
-            yield environment_client.get_app_info(app_name)
+            await environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
         try:
-            settings = yield apps.get_application(self.gamespace, app_name)
+            settings = await apps.get_application(self.gamespace, app_name)
         except NoSuchApplicationError:
             raise a.ActionError("Please select deployment method first")
         except ConfigApplicationError as e:
@@ -475,10 +463,10 @@ class ApplicationSettingsController(a.AdminController):
         m = DeploymentMethods.get(deployment_method)()
 
         m.load(deployment_data)
-        yield m.update(**kwargs)
+        await m.update(**kwargs)
 
         try:
-            yield apps.update_application_settings(self.gamespace, app_name, deployment_method, m.dump())
+            await apps.update_application_settings(self.gamespace, app_name, deployment_method, m.dump())
         except ConfigApplicationError as e:
             raise a.ActionError(e.message)
 
@@ -534,17 +522,16 @@ class ApplicationSettingsController(a.AdminController):
 class ApplicationVersionController(a.AdminController):
     BUILDS_PER_PAGE = 10
 
-    @coroutine
     @validate(app_name="str_name", app_version="str", build_page="int")
-    def get(self, app_name, app_version, build_page=1):
+    async def get(self, app_name, app_version, build_page=1):
 
         environment_client = EnvironmentClient(self.application.cache)
         apps = self.application.apps
         builds_data = self.application.builds
 
         try:
-            app = yield environment_client.get_app_info(app_name)
-        except AppNotFound as e:
+            app = await environment_client.get_app_info(app_name)
+        except AppNotFound:
             raise a.ActionError("App was not found.")
 
         versions = app.versions
@@ -553,12 +540,12 @@ class ApplicationVersionController(a.AdminController):
             raise a.ActionError("No such app version")
 
         try:
-            yield apps.get_application(self.gamespace, app_name)
+            await apps.get_application(self.gamespace, app_name)
         except NoSuchApplicationError:
             raise a.Redirect("app_settings", message="Please configure the application first", app_name=app_name)
 
         try:
-            version_settings = yield apps.get_application_version(self.gamespace, app_name, app_version)
+            version_settings = await apps.get_application_version(self.gamespace, app_name, app_version)
         except NoSuchApplicationVersionError:
             version_settings = None
             version_build = None
@@ -568,7 +555,7 @@ class ApplicationVersionController(a.AdminController):
             version_build = version_settings.build
 
         try:
-            build_items, builds = yield builds_data.list_builds_pages(
+            build_items, builds = await builds_data.list_builds_pages(
                 self.gamespace, app_name,
                 limit=ApplicationController.BUILDS_PER_PAGE,
                 offset=(ApplicationController.BUILDS_PER_PAGE * (build_page - 1)))
@@ -579,19 +566,19 @@ class ApplicationVersionController(a.AdminController):
 
         author_ids = set()
         for build in builds:
-            build.author_name = unicode(build.author)
+            build.author_name = str(build.author)
             author_ids.add(build.author)
 
         internal = Internal()
 
         try:
-            profiles = yield internal.send_request(
+            profiles = await internal.send_request(
                 "profile", "mass_profiles",
                 accounts=author_ids,
                 gamespace=self.gamespace,
                 action="get_public",
                 profile_fields=["name"])
-        except InternalError as e:
+        except InternalError:
             pass  # well
         else:
             for build in builds:
@@ -611,10 +598,9 @@ class ApplicationVersionController(a.AdminController):
             "build_title": "Build {0}".format(version_build) if version_build else "Unset",
         }
 
-        raise a.Return(result)
+        return result
 
-    @coroutine
-    def update_configuration(self):
+    async def update_configuration(self):
         app_name = self.context.get("app_name")
         app_version = self.context.get("app_version")
         build_id = self.context.get("build_id")
@@ -623,12 +609,12 @@ class ApplicationVersionController(a.AdminController):
         apps = self.application.apps
 
         try:
-            yield environment_client.get_app_info(app_name)
+            await environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
         try:
-            yield apps.update_application_version(self.gamespace, app_name, app_version, build_id)
+            await apps.update_application_version(self.gamespace, app_name, app_version, build_id)
         except ConfigApplicationError as e:
             raise a.ActionError(e.message)
 
@@ -636,8 +622,7 @@ class ApplicationVersionController(a.AdminController):
             "app_version", message="Configuration for version {0} has been updated".format(app_version),
             app_name=app_name, app_version=app_version)
 
-    @coroutine
-    def unset_configuration(self):
+    async def unset_configuration(self):
         app_name = self.context.get("app_name")
         app_version = self.context.get("app_version")
 
@@ -645,12 +630,12 @@ class ApplicationVersionController(a.AdminController):
         apps = self.application.apps
 
         try:
-            yield environment_client.get_app_info(app_name)
+            await environment_client.get_app_info(app_name)
         except AppNotFound:
             raise a.ActionError("App was not found.")
 
         try:
-            yield apps.delete_application_version(self.gamespace, app_name, app_version)
+            await apps.delete_application_version(self.gamespace, app_name, app_version)
         except ConfigApplicationError as e:
             raise a.ActionError(e.message)
 
@@ -733,23 +718,22 @@ class ApplicationVersionController(a.AdminController):
 
 
 class ApplicationsController(a.AdminController):
-    @coroutine
-    def get(self):
+    async def get(self):
         environment_client = EnvironmentClient(self.application.cache)
-        apps = yield environment_client.list_apps()
+        apps = await environment_client.list_apps()
 
         result = {
             "apps": apps
         }
 
-        raise a.Return(result)
+        return result
 
     def render(self, data):
         return [
             a.breadcrumbs([], "Applications"),
             a.links("Select application", links=[
                 a.link("app", app_title, icon="mobile", app_name=app_name)
-                for app_name, app_title in data["apps"].iteritems()
+                for app_name, app_title in data["apps"].items()
             ]),
             a.links("Navigate", [
                 a.link("index", "Go back", icon="chevron-left"),

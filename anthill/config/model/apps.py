@@ -1,14 +1,11 @@
 
-from tornado.gen import coroutine, Return
-from common.database import DatabaseError
-from common.model import Model
-from common.validate import validate
-from common.internal import Internal, InternalError
-from common.jsonrpc import JsonRPCError
-from common.login import LoginClient, LoginClientError
-from common import cached
+from anthill.common.database import DatabaseError
+from anthill.common.model import Model
+from anthill.common.validate import validate
+from anthill.common.internal import Internal
+from anthill.common.login import LoginClient, LoginClientError
 
-from builds import ConfigBuildAdapter
+from . builds import ConfigBuildAdapter
 
 import ujson
 
@@ -63,16 +60,15 @@ class BuildApplicationsModel(Model):
     def get_setup_tables(self):
         return ["config_applications", "config_application_versions"]
 
-    @coroutine
     @validate(gamespace_name="str", gamespace_id="int", application_name="str_name", application_version="str")
-    def get_version_configuration(self, application_name, application_version, gamespace_name=None, gamespace_id=None):
+    async def get_version_configuration(self, application_name, application_version, gamespace_name=None, gamespace_id=None):
 
         if gamespace_name:
 
             login_client = LoginClient(self.cache)
 
             try:
-                gamespace_info = yield login_client.find_gamespace(gamespace_name)
+                gamespace_info = await login_client.find_gamespace(gamespace_name)
             except LoginClientError as e:
                 raise ConfigApplicationError(e.code, e.message)
 
@@ -85,7 +81,7 @@ class BuildApplicationsModel(Model):
             # look for per-version configuration first
             # if failed, fallback to per-app configuration
             # if even that is failed, we have a 404 here
-            build = yield self.db.get(
+            build = await self.db.get(
                 """
                 SELECT * 
                 FROM `config_builds` AS b
@@ -112,14 +108,13 @@ class BuildApplicationsModel(Model):
         if not build:
             raise NoSuchConfigurationError()
 
-        raise Return(ConfigBuildAdapter(build))
+        return ConfigBuildAdapter(build)
 
-    @coroutine
     @validate(gamespace_id="int", application_name="str_name", deployment_method="str_name",
               deployment_data="json_dict")
-    def update_application_settings(self, gamespace_id, application_name, deployment_method, deployment_data):
+    async def update_application_settings(self, gamespace_id, application_name, deployment_method, deployment_data):
         try:
-            yield self.db.execute(
+            await self.db.execute(
                 """
                 INSERT INTO `config_applications`
                 (`gamespace_id`, `application_name`, `deployment_method`, `deployment_data`) 
@@ -130,11 +125,10 @@ class BuildApplicationsModel(Model):
         except DatabaseError as e:
             raise ConfigApplicationError(500, e.args[1])
 
-    @coroutine
     @validate(gamespace_id="int", application_name="str_name")
-    def delete_application_settings(self, gamespace_id, application_name):
+    async def delete_application_settings(self, gamespace_id, application_name):
         try:
-            deleted = yield self.db.execute(
+            deleted = await self.db.execute(
                 """
                 DELETE 
                 FROM `config_applications`
@@ -144,13 +138,12 @@ class BuildApplicationsModel(Model):
         except DatabaseError as e:
             raise ConfigApplicationError(500, e.args[1])
 
-        raise Return(bool(deleted))
+        return bool(deleted)
 
-    @coroutine
     @validate(gamespace_id="int", application_name="str_name")
-    def get_application(self, gamespace_id, application_name):
+    async def get_application(self, gamespace_id, application_name):
         try:
-            app = yield self.db.get(
+            app = await self.db.get(
                 """
                 SELECT * 
                 FROM `config_applications`
@@ -163,13 +156,12 @@ class BuildApplicationsModel(Model):
         if not app:
             raise NoSuchApplicationError()
 
-        raise Return(ConfigApplicationAdapter(app))
+        return ConfigApplicationAdapter(app)
 
-    @coroutine
     @validate(gamespace_id="int", application_name="str_name", default_build="int")
-    def update_default_build(self, gamespace_id, application_name, default_build):
+    async def update_default_build(self, gamespace_id, application_name, default_build):
         try:
-            updated = yield self.db.execute(
+            updated = await self.db.execute(
                 """
                 UPDATE `config_applications`
                 SET `default_build`=%s
@@ -179,13 +171,12 @@ class BuildApplicationsModel(Model):
         except DatabaseError as e:
             raise ConfigApplicationError(500, e.args[1])
 
-        raise Return(bool(updated))
+        return bool(updated)
 
-    @coroutine
     @validate(gamespace_id="int", application_name="str_name")
-    def unset_default_build(self, gamespace_id, application_name):
+    async def unset_default_build(self, gamespace_id, application_name):
         try:
-            updated = yield self.db.execute(
+            updated = await self.db.execute(
                 """
                 UPDATE `config_applications`
                 SET `default_build`=NULL
@@ -195,13 +186,12 @@ class BuildApplicationsModel(Model):
         except DatabaseError as e:
             raise ConfigApplicationError(500, e.args[1])
 
-        raise Return(bool(updated))
+        return bool(updated)
 
-    @coroutine
     @validate(gamespace_id="int", application_name="str_name", application_version="str", build_id="int")
-    def update_application_version(self, gamespace_id, application_name, application_version, build_id):
+    async def update_application_version(self, gamespace_id, application_name, application_version, build_id):
         try:
-            yield self.db.execute(
+            await self.db.execute(
                 """
                 INSERT INTO `config_application_versions`
                 (`gamespace_id`, `application_name`, `application_version`, `build_id`) 
@@ -212,11 +202,10 @@ class BuildApplicationsModel(Model):
         except DatabaseError as e:
             raise ConfigApplicationError(500, e.args[1])
 
-    @coroutine
     @validate(gamespace_id="int", application_name="str_name", application_version="str")
-    def delete_application_version(self, gamespace_id, application_name, application_version):
+    async def delete_application_version(self, gamespace_id, application_name, application_version):
         try:
-            deleted = yield self.db.execute(
+            deleted = await self.db.execute(
                 """
                 DELETE 
                 FROM `config_application_versions`
@@ -226,13 +215,12 @@ class BuildApplicationsModel(Model):
         except DatabaseError as e:
             raise ConfigApplicationError(500, e.args[1])
 
-        raise Return(bool(deleted))
+        return bool(deleted)
 
-    @coroutine
     @validate(gamespace_id="int", application_name="str_name", application_version="str")
-    def get_application_version(self, gamespace_id, application_name, application_version):
+    async def get_application_version(self, gamespace_id, application_name, application_version):
         try:
-            app = yield self.db.get(
+            app = await self.db.get(
                 """
                 SELECT * 
                 FROM `config_application_versions`
@@ -245,13 +233,12 @@ class BuildApplicationsModel(Model):
         if not app:
             raise NoSuchApplicationVersionError()
 
-        raise Return(ConfigApplicationVersionAdapter(app))
+        return ConfigApplicationVersionAdapter(app)
 
-    @coroutine
     @validate(gamespace_id="int", application_name="str_name")
-    def list_application_versions(self, gamespace_id, application_name):
+    async def list_application_versions(self, gamespace_id, application_name):
         try:
-            v = yield self.db.query(
+            v = await self.db.query(
                 """
                 SELECT * 
                 FROM `config_application_versions`
@@ -261,4 +248,4 @@ class BuildApplicationsModel(Model):
         except DatabaseError as e:
             raise ConfigApplicationError(500, e.args[1])
 
-        raise Return(map(ConfigApplicationVersionAdapter, v))
+        return map(ConfigApplicationVersionAdapter, v)
