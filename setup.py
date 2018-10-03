@@ -7,6 +7,9 @@ DEPENDENCIES = [
 
 setup(
     name='anthill-config',
+    package_data={
+      "anthill.config": ["anthill/config/sql", "anthill/config/static"]
+    },
     setup_requires=["pypigit-version"],
     git_version="0.1.0",
     description='Dynamic configuration service for Anthill platform',
