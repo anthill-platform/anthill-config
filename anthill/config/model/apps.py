@@ -248,4 +248,4 @@ class BuildApplicationsModel(Model):
         except DatabaseError as e:
             raise ConfigApplicationError(500, e.args[1])
 
-        return map(ConfigApplicationVersionAdapter, v)
+        return list(map(ConfigApplicationVersionAdapter, v))

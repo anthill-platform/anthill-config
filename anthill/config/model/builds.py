@@ -119,7 +119,7 @@ class BuildsModel(Model):
         except DatabaseError as e:
             raise ConfigBuildError(500, e.args[1])
 
-        return map(ConfigBuildAdapter, builds)
+        return list(map(ConfigBuildAdapter, builds))
 
     @validate(gamespace_id="int", application_name="str_name", limit="int", offset="int")
     async def list_builds_pages(self, gamespace_id, application_name, limit=20, offset=0):
