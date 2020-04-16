@@ -21,7 +21,7 @@ define("name",
 # MySQL database
 
 define("db_host",
-       default="localhost",
+       default="anthill-mysql",
        type=str,
        help="MySQL database location")
 
@@ -43,7 +43,7 @@ define("db_name",
 # Regular cache
 
 define("cache_host",
-       default="localhost",
+       default="anthill-redis",
        help="Location of a regular cache (redis).",
        group="cache",
        type=str)
@@ -69,13 +69,13 @@ define("cache_max_connections",
 # CONFIG
 
 define("data_runtime_location",
-       default="/usr/local/anthill/config-runtime",
+       default="/config/runtime",
        help="CONFIG content runtime folder",
        group="config",
        type=str)
 
 define("data_host_location",
-       default="http://config-dev.anthill/download/",
+       default="http://localhost:9504/download/",
        help="CONFIG content prefix URL",
        group="config",
        type=str)
